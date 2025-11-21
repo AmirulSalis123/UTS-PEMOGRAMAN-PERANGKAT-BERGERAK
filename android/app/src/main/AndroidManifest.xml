@@ -1,11 +1,38 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.CALL_PHONE" />
-    <uses-permission android:name="android.permission.INTERET" />
+    <uses-permission android:name="android.permission.INTERNET" />
     
+    <queries>
+        <!-- Untuk telepon -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        
+        <!-- Untuk WhatsApp -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        
+        <!-- Untuk Maps -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+
+        <intent>
+         <action android:name="android.intent.action.SENDTO" />
+        <data android:scheme="mailto" />
+        </intent>
+        
+    </queries>
+
     <application
         android:label="Warung Ajib"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
 
         <activity

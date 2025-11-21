@@ -11,18 +11,17 @@ class PasswordField extends StatefulWidget {
   final IconData? prefixIcon;
 
   const PasswordField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     this.prefixIcon,
-  }) : super(key: key);
+  });
 
   @override
-  _PasswordFieldState createState() => _PasswordFieldState();
+  State<PasswordField> createState() => _PasswordFieldState();
 }
 
 class _PasswordFieldState extends State<PasswordField> {
-  // State untuk mengontrol visibilitas password
   bool _isHidden = true;
 
   void _toggleVisibility() {
@@ -35,18 +34,17 @@ class _PasswordFieldState extends State<PasswordField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: widget.controller,
-      obscureText: _isHidden, // Terikat pada state Show/Hide
+      obscureText: _isHidden,
       decoration: InputDecoration(
         labelText: widget.labelText,
         border: const OutlineInputBorder(),
         prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
-        // Tombol Suffix (ikon mata) untuk mengubah state
         suffixIcon: IconButton(
           icon: Icon(
-            _isHidden ? Icons.visibility : Icons.visibility_off,
+            _isHidden ? Icons.visibility_off : Icons.visibility,
             color: Colors.grey,
           ),
-          onPressed: _toggleVisibility, // Mengubah state saat diklik
+          onPressed: _toggleVisibility,
         ),
       ),
     );
@@ -63,62 +61,158 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _rememberMe = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberMeStatus();
+    _checkForDeletedAccount();
+    _autoFillCredentials();
+  }
+
+  void _loadRememberMeStatus() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _rememberMe = prefs.getBool('rememberMe') ?? false;
+    });
+    
+    // Auto-fill credentials jika rememberMe true
+    if (_rememberMe) {
+      String? savedEmail = prefs.getString('savedEmail');
+      String? savedPassword = prefs.getString('savedPassword');
+      
+      if (savedEmail != null && savedPassword != null) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _passwordController.text = savedPassword;
+        });
+      }
+    }
+  }
+
+  void _autoFillCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    // Cek apakah "Ingatkan Saya" aktif DAN ada saved credentials
+    bool rememberMe = prefs.getBool('rememberMe') ?? false;
+    String? savedEmail = prefs.getString('savedEmail');
+    String? savedPassword = prefs.getString('savedPassword');
+    
+    if (rememberMe && savedEmail != null && savedPassword != null) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+      });
+    }
+  }
+
+  void _checkForDeletedAccount() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? isAccountDeleted = prefs.getBool('accountDeleted');
+    
+    if (isAccountDeleted == true) {
+      await prefs.clear();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Akun Anda telah dihapus. Silakan daftar ulang.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   void _login() async {
+    if (_isLoading) return;
+
     final String email = _emailController.text.trim();
     final String password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: const Text('Email dan password harus diisi'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showErrorSnackBar('Email dan password harus diisi');
       return;
     }
 
-    // Validasi format email
-    if (!email.contains('@') || !email.contains('.')) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: const Text('Format email tidak valid'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showErrorSnackBar('Format email tidak valid');
       return;
     }
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    
-    final bool isDefaultUser = (email == 'admin@gmail.com' && password == '123456');
-    final bool isRegisteredUser = (prefs.getString('email') == email && 
-                                   prefs.getString('password') == password);
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (isDefaultUser || isRegisteredUser) {
-      await prefs.setBool('isLoggedIn', true);
-      await prefs.setString('email', email);
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DashboardScreen()),
-        );
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      
+      bool? isAccountDeleted = prefs.getBool('accountDeleted');
+      if (isAccountDeleted == true) {
+        _showErrorSnackBar('Akun telah dihapus. Tidak dapat login.');
+        return;
       }
-    } else {
+
+      final bool isDefaultUser = (email == 'admin@gmail.com' && password == '123456');
+      final bool isRegisteredUser = (prefs.getString('email') == email && 
+                                    prefs.getString('password') == password);
+
+      if (isDefaultUser || isRegisteredUser) {
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('email', email);
+        await prefs.setBool('rememberMe', _rememberMe);
+
+        // Simpan credentials jika "Ingatkan Saya" dipilih
+        if (_rememberMe) {
+          await prefs.setString('savedEmail', email);
+          await prefs.setString('savedPassword', password);
+        } else {
+          // Jika tidak dipilih, hapus saved credentials
+          await prefs.remove('savedEmail');
+          await prefs.remove('savedPassword');
+        }
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          );
+        }
+      } else {
+        _showErrorSnackBar('Email atau password salah');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Terjadi kesalahan: $e');
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: const Text('Email atau password salah'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
+  }
+
+  void _loginWithGoogle() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fitur login dengan Google akan segera hadir!'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   void _navigateToRegister() {
@@ -135,6 +229,12 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
       );
     }
+  }
+
+  void _toggleRememberMe(bool? value) {
+    setState(() {
+      _rememberMe = value ?? false;
+    });
   }
 
   @override
@@ -163,6 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email_outlined),
               ),
+              onSubmitted: (_) => _login(),
             ),
             const SizedBox(height: 16),
             PasswordField(
@@ -171,54 +272,154 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icons.lock,
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 20.0),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: _forgotPassword, // Panggil fungsi navigasi
-                  child: const Text(
-                    'Lupa Password?',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _login,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Login', style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 20),
-            RichText(
-              text: TextSpan(
+              padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+              child: Row(
                 children: [
-                  const TextSpan(
-                    text: 'Belum punya akun? ',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: _isLoading ? null : _toggleRememberMe,
+                    activeColor: Colors.blue,
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: _isLoading ? null : () {
+                      _toggleRememberMe(!_rememberMe);
+                    },
+                    child: Text(
+                      'Ingatkan Saya',
+                      style: TextStyle(
+                        color: _isLoading ? Colors.grey : Colors.black87,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                  TextSpan(
-                    text: 'Daftar!',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
+                  const Spacer(),
+                  if (!_isLoading)
+                    GestureDetector(
+                      onTap: _forgotPassword,
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
-                    recognizer: TapGestureRecognizer()..onTap = _navigateToRegister,
-                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _login,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: _isLoading ? Colors.grey : Colors.blue,
+              ),
+              child: _isLoading 
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Login', 
+                      style: TextStyle(fontSize: 16, color: Colors.white)
+                    ),
+            ),
+            const SizedBox(height: 10),
+
+            if (!_isLoading) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: Colors.grey[400],
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'atau',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: Colors.grey[400],
+                      thickness: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              OutlinedButton(
+                onPressed: _isLoading ? null : _loginWithGoogle,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.grey),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/google_icon.png'),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Masuk dengan Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              RichText(
+                text: TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: 'Belum punya akun? ',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Daftar!',
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = _isLoading ? null : _navigateToRegister,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

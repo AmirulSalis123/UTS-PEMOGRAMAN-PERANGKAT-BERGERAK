@@ -29,51 +29,45 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: Colors.white,
-    body: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            'assets/images/',
-            width: 150,
-            height: 150,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.restaurant, size: 80, color: Colors.white),
-              );
-            },
-          ),
-          SizedBox(height: 20),
-          Text(
-            'Selamat Datang di',
-            style: TextStyle(fontSize: 20, color: Colors.grey),
-          ),
-          Text(
-            'WARUNG AJIB',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.orange[700],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Gambar diganti dengan icon/logo sederhana
+            Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.restaurant, size: 80, color: Colors.white),
             ),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Mranggen, Demak',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-        ],
+            SizedBox(height: 20),
+            Text(
+              'Selamat Datang di',
+              style: TextStyle(fontSize: 20, color: Colors.grey),
+            ),
+            Text(
+              'WARUNG AJIB',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange[700],
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Mranggen, Demak',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

@@ -1,5 +1,3 @@
-// File: edit_username_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,11 +15,28 @@ class EditUsernameScreen extends StatefulWidget {
 
 class _EditUsernameScreenState extends State<EditUsernameScreen> {
   late TextEditingController _controller;
+  bool _showError = false;
+  String _errorMessage = '';
   
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue);
+    // Hanya set nilai jika bukan nilai default "belum diatur"
+    if (widget.initialValue != 'user belum diatur') {
+      _controller = TextEditingController(text: widget.initialValue);
+    } else {
+      _controller = TextEditingController(); // Kosong jika belum diatur
+    }
+
+    // Tambahkan listener untuk menyembunyikan error ketika user mulai mengetik
+    _controller.addListener(() {
+      if (_showError && _controller.text.trim().isNotEmpty) {
+        setState(() {
+          _showError = false;
+          _errorMessage = '';
+        });
+      }
+    });
   }
   
   @override
@@ -30,26 +45,22 @@ class _EditUsernameScreenState extends State<EditUsernameScreen> {
     super.dispose();
   }
 
-  void _showSnackbar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _saveChanges() async {
     final String newValue = _controller.text.trim();
     
     if (newValue.isEmpty) {
-        _showSnackbar('Username tidak boleh kosong.', Colors.red);
-        return;
+      setState(() {
+        _showError = true;
+        _errorMessage = 'Username harus diisi';
+      });
+      return;
     }
     if (newValue.length < 4) {
-        _showSnackbar('Username minimal 4 karakter.', Colors.red);
-        return;
+      setState(() {
+        _showError = true;
+        _errorMessage = 'Username minimal 4 karakter';
+      });
+      return;
     }
 
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -57,14 +68,24 @@ class _EditUsernameScreenState extends State<EditUsernameScreen> {
     // Simpan data baru dengan kunci 'username'
     await prefs.setString('username', newValue);
     
-    _showSnackbar('Username berhasil diperbarui!', Colors.green);
+    // Tampilkan snackbar sukses
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Username berhasil diperbarui!'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
     
     // Kembali ke layar sebelumnya
-    Navigator.pop(context); 
+    Navigator.pop(context, true); 
   }
 
   @override
   Widget build(BuildContext context) {
+    // Tentukan warna icon berdasarkan ada/tidak error
+    final Color iconColor = _showError ? Colors.red : Colors.grey;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ubah Username'),
@@ -86,10 +107,33 @@ class _EditUsernameScreenState extends State<EditUsernameScreen> {
               controller: _controller,
               keyboardType: TextInputType.text,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Username Baru',
-                prefixIcon: Icon(Icons.badge),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'Username',
+                labelStyle: TextStyle(
+                  color: _showError ? Colors.red : null,
+                ),
+                prefixIcon: Icon(
+                  Icons.badge,
+                  color: iconColor,
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: _showError ? Colors.red : Colors.grey,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: _showError ? Colors.red : Colors.blue,
+                    width: 2.0,
+                  ),
+                ),
+                errorText: _showError ? _errorMessage : null,
+                errorBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red),
+                ),
+                focusedErrorBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red, width: 2.0),
+                ),
               ),
             ),
             
@@ -103,7 +147,7 @@ class _EditUsernameScreenState extends State<EditUsernameScreen> {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Simpan Username', style: TextStyle(fontSize: 16)),
+              child: const Text('Simpan', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

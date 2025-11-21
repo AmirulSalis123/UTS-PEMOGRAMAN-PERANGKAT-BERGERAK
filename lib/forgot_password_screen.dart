@@ -1,103 +1,146 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'otp_verification_screen.dart'; // Import halaman OTP
+import 'otp_verification_screen.dart';
 
-class ForgotPasswordScreen extends StatelessWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController identifierController = TextEditingController();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
 
-    Future<void> _sendOtp() async {
-      String identifier = identifierController.text.trim();
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final TextEditingController identifierController = TextEditingController();
+  String? _errorMessage;
+  bool _showError = false;
+  bool _hasBeenValidated = false;
 
-      if (identifier.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: const Text('Masukkan Email atau Nomor Telepon Anda.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+  Future<void> sendOtp(BuildContext context) async {
+    String identifier = identifierController.text.trim();
+
+    setState(() {
+      _hasBeenValidated = true;
+      _showError = false;
+      _errorMessage = null;
+    });
+
+    // Validasi 1: Field tidak boleh kosong
+    if (identifier.isEmpty) {
+      setState(() {
+        _showError = true;
+        _errorMessage = 'Masukkan Email atau Nomor Telepon Anda.';
+      });
+      return;
+    }
+
+    // Validasi format
+    bool isValidFormat = true;
+    
+    if (identifier.contains('@')) {
+      // Validasi format email
+      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
+        isValidFormat = false;
       }
-
-      // Validasi format jika input adalah email
-      if (identifier.contains('@')) {
-        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Format email tidak valid.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-      } 
-      // Validasi format jika input adalah nomor telepon
-      else {
-        if (!RegExp(r'^[0-9]+$').hasMatch(identifier)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nomor telepon hanya boleh berisi angka.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-        if (identifier.length < 10) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nomor telepon minimal 10 digit.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
+    } else {
+      // Validasi format nomor telepon
+      if (!RegExp(r'^[0-9]+$').hasMatch(identifier) || identifier.length < 10) {
+        isValidFormat = false;
       }
+    }
 
-      // Cek apakah identifier terdaftar di SharedPreferences
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final String? savedEmail = prefs.getString('email');
-      final String? savedPhone = prefs.getString('phone');
+    // Cek apakah identifier terdaftar di SharedPreferences
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? savedEmail = prefs.getString('email');
+    final String? savedPhone = prefs.getString('phone');
 
-      bool isRegistered = false;
-      
-      if (identifier.contains('@')) {
-        // Cek email
-        isRegistered = (savedEmail == identifier);
-      } else {
-        // Cek nomor telepon
-        isRegistered = (savedPhone == identifier);
-      }
+    bool isRegistered = false;
+    
+    if (identifier.contains('@')) {
+      // Cek email
+      isRegistered = (savedEmail == identifier);
+    } else {
+      // Cek nomor telepon
+      isRegistered = (savedPhone == identifier);
+    }
 
-      if (!isRegistered) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email/Nomor Telepon tidak terdaftar.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
+    // Validasi 2: Format tidak valid atau tidak terdaftar
+    if (!isValidFormat || !isRegistered) {
+      setState(() {
+        _showError = true;
+        _errorMessage = 'Email/Nomor Telepon tidak terdaftar.';
+      });
+      return;
+    }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Kode OTP telah dikirim ke $identifier.'),
-          backgroundColor: Colors.green,
+    // Simpan identifier untuk digunakan di OTP screen
+    await prefs.setString('forgotPasswordIdentifier', identifier);
+
+    // Tentukan apakah ini SMS atau Email
+    bool isSms = !identifier.contains('@');
+
+    // Navigasi ke halaman verifikasi OTP dengan mengirim email/phone
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtpVerificationScreen(
+          email: identifier,
+          isForPasswordReset: true,
+          isSms: isSms,
+        ),
       ),
     );
+  }
+
+  // METHOD BARU: Validasi real-time
+  void _validateField(String value) {
+    if (_hasBeenValidated) {
+      final identifier = value.trim();
       
+      // Validasi 1: Field tidak boleh kosong
+      if (identifier.isEmpty) {
+        setState(() {
+          _showError = true;
+          _errorMessage = 'Masukkan Email atau Nomor Telepon Anda.';
+        });
+        return;
+      }
 
-      // Simpan identifier untuk digunakan di OTP screen
-      await prefs.setString('forgotPasswordIdentifier', identifier);
+      // Validasi format
+      bool isValidFormat = true;
+      
+      if (identifier.contains('@')) {
+        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
+          isValidFormat = false;
+        }
+      } else {
+        if (!RegExp(r'^[0-9]+$').hasMatch(identifier) || identifier.length < 10) {
+          isValidFormat = false;
+        }
+      }
 
-      // Navigasi ke halaman verifikasi OTP
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const OtpVerificationScreen()),
-      );
+      // Validasi 2: Format tidak valid (anggap sebagai tidak terdaftar untuk konsistensi)
+      if (!isValidFormat) {
+        setState(() {
+          _showError = true;
+          _errorMessage = 'Email/Nomor Telepon tidak terdaftar.';
+        });
+        return;
+      }
+
+      // Jika semua validasi passed, hapus error
+      setState(() {
+        _showError = false;
+        _errorMessage = null;
+      });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Tentukan warna icon dan border berdasarkan ada/tidak error
+    final Color iconColor = _showError ? Colors.red : Colors.grey;
+    final Color borderColor = _showError ? Colors.red : Colors.grey;
+    final Color focusedBorderColor = _showError ? Colors.red : Colors.blue;
 
     return Scaffold(
       appBar: AppBar(
@@ -120,17 +163,39 @@ class ForgotPasswordScreen extends StatelessWidget {
             TextField(
               controller: identifierController,
               keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email / Nomor Telepon',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_search),
+                labelStyle: TextStyle(
+                  color: _showError ? Colors.red : null,
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: focusedBorderColor,
+                    width: 2.0,
+                  ),
+                ),
+                prefixIcon: Icon(
+                  Icons.person_search,
+                  color: iconColor,
+                ),
+                errorText: _showError ? _errorMessage : null,
+                errorBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red),
+                ),
+                focusedErrorBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red, width: 2.0),
+                ),
               ),
+              onChanged: _validateField,
             ),
             
             const SizedBox(height: 30),
             
             ElevatedButton(
-              onPressed: _sendOtp,
+              onPressed: () => sendOtp(context),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
                 backgroundColor: Colors.blue,

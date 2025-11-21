@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'update_user_screen.dart'; 
-import 'edit_nama_screen.dart';
 import 'edit_username_screen.dart';
 import 'edit_email_screen.dart';
 import 'edit_phone_screen.dart';
@@ -14,7 +13,6 @@ class KeamananAkunScreen extends StatefulWidget {
 }
 
 class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
-  String _fullName = 'Memuat...';
   String _username = 'Memuat...';
   String _phone = 'Memuat...';
   String _email = 'Memuat...';
@@ -28,9 +26,8 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
   Future<void> _loadUserData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _fullName = prefs.getString('fullName') ?? 'Nama belum diatur';
-      _username = prefs.getString('username') ?? 'User belum diatur';
-      _phone = prefs.getString('phone') ?? 'Nomor belum diatur'; 
+      _username = prefs.getString('username') ?? 'user belum diatur';
+      _phone = prefs.getString('phone') ?? 'nomor belum diatur'; 
       _email = prefs.getString('email') ?? 'email belum diatur';
     });
   }
@@ -40,10 +37,6 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
     String initialValue;
     
     switch (field) {
-      case 'Nama Lengkap':
-        initialValue = _fullName;
-        targetScreen = EditNamaScreen(initialValue: initialValue);
-        break;
       case 'Username':
         initialValue = _username;
         targetScreen = EditUsernameScreen(initialValue: initialValue);
@@ -66,10 +59,11 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => targetScreen),
-    );
-    // Reload data setelah kembali
-    await _loadUserData();
+    ).then((result) {
+      _loadUserData();
+    });
   }
+
 
   // Widget untuk item yang bisa di-tap (untuk semua field yang bisa diedit)
   Widget _buildTappableItem(BuildContext context, {required String label, required String value, required String fieldKey}) {
@@ -84,36 +78,22 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label, 
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal)
-                  ),
-                  if (value.isNotEmpty)
-                    const SizedBox(height: 4),
-                  if (value.isNotEmpty)
-                    Text(
-                      displayValue, 
-                      style: const TextStyle(fontSize: 14, color: Colors.grey)
-                    ),
-                ],
-              ),
+            Text(
+              label, 
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal)
             ),
             Expanded(
-              flex: 2,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (value.isNotEmpty)
-                    Text(
-                      displayValue, 
-                      style: const TextStyle(fontSize: 16, color: Colors.black),
-                      textAlign: TextAlign.end,
+                  Text(
+                    displayValue, 
+                    style: TextStyle(
+                      fontSize: 16, 
+                      color: _isDefaultValue(value) ? Colors.red : Colors.black
                     ),
+                    textAlign: TextAlign.end,
+                  ),
                   const SizedBox(width: 8),
                   const Icon(Icons.chevron_right, color: Colors.grey),
                 ],
@@ -125,8 +105,21 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
     );
   }
 
+  // Method untuk mengecek apakah nilai adalah nilai default (belum diatur)
+  bool _isDefaultValue(String value) {
+    return value == 'nama belum diatur' || 
+           value == 'user belum diatur' || 
+           value == 'nomor belum diatur' || 
+           value == 'email belum diatur';
+  }
+
   // Method untuk mendapatkan nilai yang ditampilkan dengan format yang aman
   String _getDisplayValue(String label, String value) {
+    // Jika nilai adalah default, tampilkan apa adanya
+    if (_isDefaultValue(value)) {
+      return value;
+    }
+    
     if (value.isEmpty) return '';
     
     switch (label) {
@@ -153,7 +146,7 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Keamanan & Akun'),
+        title: const Text('Keamanan Akun'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -175,17 +168,6 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
                   )
                 ),
               ),
-              
-              // Nama Lengkap - bisa di-edit
-              _buildTappableItem(
-                context, 
-                label: 'Nama Lengkap', 
-                value: _fullName, 
-                fieldKey: 'Nama Lengkap'
-              ),
-              const Divider(height: 1),
-
-              // Username - SEKARANG BISA DI-EDIT
               _buildTappableItem(
                 context, 
                 label: 'Username', 
@@ -194,7 +176,6 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
               ),
               const Divider(height: 1),
 
-              // No. Handphone - SEKARANG BISA DI-EDIT
               _buildTappableItem(
                 context, 
                 label: 'No. Handphone', 
@@ -203,7 +184,6 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
               ),
               const Divider(height: 1),
 
-              // Email - SEKARANG BISA DI-EDIT
               _buildTappableItem(
                 context, 
                 label: 'Email', 
@@ -224,7 +204,6 @@ class _KeamananAkunScreenState extends State<KeamananAkunScreen> {
                 ),
               ),
 
-              // Ganti Password - bisa di-tap
               _buildTappableItem(
                 context, 
                 label: 'Ganti Password', 

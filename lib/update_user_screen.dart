@@ -7,18 +7,17 @@ class PasswordField extends StatefulWidget {
   final IconData prefixIcon;
 
   const PasswordField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     required this.prefixIcon,
-  }) : super(key: key);
+  });
 
   @override
-  _PasswordFieldState createState() => _PasswordFieldState();
+  State<PasswordField> createState() => PasswordFieldState();
 }
 
-class _PasswordFieldState extends State<PasswordField> {
-  // State untuk mengontrol visibilitas password
+class PasswordFieldState extends State<PasswordField> {
   bool _isHidden = true;
 
   void _toggleVisibility() {
@@ -33,18 +32,17 @@ class _PasswordFieldState extends State<PasswordField> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: widget.controller,
-        obscureText: _isHidden, // Terikat pada state Show/Hide
+        obscureText: _isHidden,
         decoration: InputDecoration(
           labelText: widget.labelText,
           border: const OutlineInputBorder(),
           prefixIcon: Icon(widget.prefixIcon),
-          // Tombol Suffix (ikon mata) untuk mengubah state
           suffixIcon: IconButton(
             icon: Icon(
-              _isHidden ? Icons.visibility : Icons.visibility_off,
+              _isHidden ? Icons.visibility_off : Icons.visibility,
               color: Colors.grey,
             ),
-            onPressed: _toggleVisibility, // Mengubah state saat diklik
+            onPressed: _toggleVisibility,
           ),
         ),
       ),
@@ -53,11 +51,13 @@ class _PasswordFieldState extends State<PasswordField> {
 }
 
 class UpdateUserScreen extends StatefulWidget {
+  const UpdateUserScreen({super.key});
+
   @override
-  _UpdateUserScreenState createState() => _UpdateUserScreenState();
+  State<UpdateUserScreen> createState() => UpdateUserScreenState();
 }
 
-class _UpdateUserScreenState extends State<UpdateUserScreen> {
+class UpdateUserScreenState extends State<UpdateUserScreen> {
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -73,32 +73,38 @@ class _UpdateUserScreenState extends State<UpdateUserScreen> {
     final String confirmPassword = _confirmPasswordController.text.trim();
 
     if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Semua data harus diisi'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Semua data harus diisi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
     }
 
     if (newPassword.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password baru minimal 6 karakter'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password baru minimal 6 karakter'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password baru dan konfirmasi password tidak sama'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password baru dan konfirmasi password tidak sama'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -107,29 +113,36 @@ class _UpdateUserScreenState extends State<UpdateUserScreen> {
 
     // Cek password lama
     if (currentPassword != savedPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password lama salah'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password lama salah'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     // Update password
     await prefs.setString('password', newPassword);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Password berhasil diupdate'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password berhasil diupdate'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-    // Clear form
-    _currentPasswordController.clear();
-    _newPasswordController.clear();
-    _confirmPasswordController.clear();
+      // Clear form
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+
+      // Kembali ke halaman keamanan akun
+      Navigator.pop(context);
+    }
   }
 
   @override

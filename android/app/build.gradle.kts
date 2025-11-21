@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.blangkis_app"
+    namespace = "com.example._app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

@@ -41,7 +41,7 @@ class _PasswordFieldState extends State<PasswordField> {
         // Tombol Suffix (ikon mata) untuk mengubah state
         suffixIcon: IconButton(
           icon: Icon(
-            _isHidden ? Icons.visibility : Icons.visibility_off,
+            _isHidden ? Icons.visibility_off : Icons.visibility,
             color: Colors.grey,
           ),
           onPressed: _toggleVisibility, // Mengubah state saat diklik
@@ -59,32 +59,59 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  // Validasi email dengan TLD yang diperbolehkan
+  bool _isEmailValid(String email) {
+  // Regex untuk validasi format email dasar
+  final emailRegex = RegExp(
+    r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?$'
+  );
+  
+  if (!emailRegex.hasMatch(email)) {
+    return false;
+  }
+
+  // Daftar TLD yang umum digunakan
+  const allowedTlds = [
+    'com', 'org', 'net', 'edu', 'gov', 'id', 'co', 'uk', 'jp', 'de', 
+    'fr', 'it', 'au', 'ca', 'sg', 'my', 'th', 'vn', 'ph'
+  ];
+
+  // Ekstrak bagian domain dan TLD
+  final domainParts = email.split('@')[1].split('.');
+  final tld = domainParts.last.toLowerCase();
+  final domain = domainParts.length > 1 ? domainParts[domainParts.length - 2] : '';
+
+  // VALIDASI KHUSUS: Tolak domain populer dengan TLD tidak standar
+  const popularDomains = ['gmail', 'yahoo', 'hotmail', 'outlook', 'icloud'];
+  const nonStandardTlds = ['co', 'io', 'ai', 'me', 'tv', 'cc', 'ws'];
+  
+  if (popularDomains.contains(domain) && nonStandardTlds.contains(tld)) {
+    return false; // Tolak gmail.co, yahoo.io, dll
+  }
+
+  return allowedTlds.contains(tld);
+}
+
   void _register() async {
-    final String fullName = _fullNameController.text.trim();
     final String username = _usernameController.text.trim();
-    final String phone = _phoneController.text.trim();
     final String email = _emailController.text.trim();
     final String password = _passwordController.text.trim();
     final String confirmPassword = _confirmPasswordController.text.trim();
 
     // Validasi form
-    if (fullName.isEmpty || 
-        username.isEmpty || 
-        phone.isEmpty || 
+    if (username.isEmpty ||  
         email.isEmpty || 
         password.isEmpty || 
         confirmPassword.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: const Text('Semua data harus diisi'),
+            content: Text('Semua data harus diisi'),
             backgroundColor: Colors.red,
           ),
         );
@@ -92,25 +119,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Validasi format email
-    if (!email.contains('@') || !email.contains('.')) {
+    // Validasi format email dengan filter TLD
+    if (!_isEmailValid(email)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: const Text('Format email tidak valid'),
-            backgroundColor: Colors.red,
-            ) ,
-          );
-      }
-      return;
-    }
-
-    // Validasi format nomor telepon (minimal 10 digit, hanya angka)
-    if (phone.length < 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: const Text('Nomor telepon harus minimal 10 digit dan hanya berisi angka'),
+            content: Text('Format email tidak valid'),
             backgroundColor: Colors.red,
           ),
         );
@@ -122,10 +136,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: const Text('Password dan konfirmasi password tidak sama'),
-              backgroundColor: Colors.red,
-            ),
-          );
+            content: Text('Password dan konfirmasi password tidak sama'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
       return;
     }
@@ -134,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: const Text('Password minimal 6 karakter'),
+            content: Text('Password minimal 6 karakter'),
             backgroundColor: Colors.red,
           ),
         );
@@ -145,19 +159,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Simpan data user
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', true);
-    await prefs.setString('fullName', fullName);
     await prefs.setString('username', username);
-    await prefs.setString('phone', phone);
     await prefs.setString('email', email);
     await prefs.setString('password', password);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: const Text('Registrasi berhasil!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+        const SnackBar(
+          content: Text('Registrasi berhasil!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
       Navigator.pushReplacement(
         context,
@@ -200,17 +212,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 30),
               
-              // Nama Lengkap
-              TextField(
-                controller: _fullNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Lengkap',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
               // Username
               TextField(
                 controller: _usernameController,
@@ -218,18 +219,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'Username',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Nomor Telepon
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor Telepon',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
                 ),
               ),
               const SizedBox(height: 16),
@@ -245,7 +234,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+            
               // Password
               PasswordField(
                 controller: _passwordController,

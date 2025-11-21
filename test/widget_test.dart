@@ -1,31 +1,43 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-// ignore: depend_on_referenced_packages
 import 'package:warung_ajib/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  testWidgets('App launches and shows SplashScreen with correct content', (WidgetTester tester) async {
+    // Build our app
+    await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that MaterialApp is present
+    expect(find.byType(MaterialApp), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that SplashScreen is shown
+    expect(find.byType(Scaffold), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify ALL the text content that actually exists in your SplashScreen
+    expect(find.text('Selamat Datang di'), findsOneWidget);
+    expect(find.text('WARUNG AJIB'), findsOneWidget);
+    expect(find.text('Mranggen, Demak'), findsOneWidget);
+
+    // Verify there's an Icon (based on the widget tree)
+    expect(find.byType(Icon), findsOneWidget);
+
+    // Verify the layout structure
+    expect(find.byType(Center), findsWidgets);
+    expect(find.byType(Column), findsWidgets);
+  });
+
+  testWidgets('SplashScreen has correct widget hierarchy', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    // Verify the main structural widgets
+    expect(find.byType(MaterialApp), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.byType(Center), findsWidgets);
+    expect(find.byType(Column), findsWidgets);
+
+    // Verify all three text widgets are present
+    expect(find.text('Selamat Datang di'), findsOneWidget);
+    expect(find.text('WARUNG AJIB'), findsOneWidget);
+    expect(find.text('Mranggen, Demak'), findsOneWidget);
   });
 }

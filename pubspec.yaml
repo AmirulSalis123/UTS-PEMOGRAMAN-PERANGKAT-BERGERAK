@@ -15,15 +15,24 @@ dependencies:
   shared_preferences: ^2.2.2
   url_launcher: ^6.1.11
   google_maps_flutter: ^2.2.6
+  intl: ^0.18.1
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo_warung_ajib.png"
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/google_icon.png
     - assets/images/es_teh_ajib.png
     - assets/images/lumpia.png
     - assets/images/jajanan.png
@@ -32,3 +41,4 @@ flutter:
     - assets/images/sate.png
     - assets/images/nasgor.png
     - assets/images/es_jeruk.png
+    - assets/images/logo_warung_ajib.png
